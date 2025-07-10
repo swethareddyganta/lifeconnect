@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Profile information
+  fullName        String?
+  avatarUrl       String?
+  linkedinId      String?
+  linkedinToken   String?
+  linkedinProfile Json?
+  twitterId       String?
+  twitterToken    String?
+  twitterProfile  Json?
+
+  // Relations
+  events      Event[]
+  sentConnections     Connection[] @relation("Requester")
+  receivedConnections Connection[] @relation("Recipient")
+  searchHistory SearchHistory[]
+  conversationStarters ConversationStarter[]
+  searchResults SearchResult[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  location    String?
+  startYear   Int?
+  endYear     Int?
+  description String?
+  type        String?  // education, work, location, personal
+  tags        String[] // Array of tags for better search
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+model Connection {
+  id        String   @id @default(cuid())
+  status    String   @default("pending") // pending, accepted, rejected, blocked
+  message   String?  // Optional message when sending connection request
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  requesterId String
+  requester   User   @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  
+  recipientId String
+  recipient   User   @relation("Recipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, recipientId])
+  @@map("connections")
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  query     String
+  results   Json?    // Store search results for analytics
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("search_history")
+}
+
+model ConversationStarter {
+  id        String   @id @default(cuid())
+  memory    String
+  personName String?
+  starter   String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_starters")
+}
+
+model SearchResult {
+  id        String   @id @default(cuid())
+  query     String
+  profiles  Json     // LinkedIn profiles found
+  emails    Json     // Generated cold emails
+  emailsFound Int    @default(0)
+  emailsGenerated Int @default(0)
+  status    String   @default("pending") // pending, processing, completed, failed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("search_results")
+} 
